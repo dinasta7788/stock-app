@@ -19,7 +19,7 @@ const state = {
   loadErrors: [],
   lastLoad: 0,
   tab: null,
-  ui: { kind: "すべて", mover: "値上がり率", top30: "代金", sectorSort: "前日比", sectorsAll: false, flowAll: false, more: {} },
+  ui: { kind: "すべて", mover: "値上がり率", top30: "代金", candle: "連続陽線", sectorSort: "前日比", sectorsAll: false, flowAll: false, more: {} },
 };
 
 const $ = (s) => document.querySelector(s);
@@ -270,6 +270,21 @@ function renderEvening() {
       <button class="more" data-toggle="flowAll">${state.ui.flowAll ? "上位だけ表示" : "33業種すべて見る"}</button>`;
   }
 
+  // 連続陽線・連続陰線
+  let candleHtml = `<div class="empty">データがありません</div>`;
+  if (e.連続足) {
+    const list = e.連続足[state.ui.candle] || [];
+    const cols = [
+      { label: "日数", html: (x) => `<span class="${state.ui.candle === "連続陽線" ? "up" : "down"}">${fmt(x.連続日数, 0)}日</span>` },
+      { label: "終値", html: (x) => fmt(x.終値, 0) },
+      { label: "前日比", html: (x) => chg2(x.前日比率, x.前日比) },
+      { label: "代金", html: (x) => `${fmt(x.売買代金_億円, 1)}億` },
+    ];
+    candleHtml = chips("candle", ["連続陽線", "連続陰線"], state.ui.candle)
+      + stockTable(limited("candle", list, 20), cols) + moreButton("candle", 20, list.length)
+      + `<p class="muted small">終値が始値より高い(陽線)・安い(陰線)日が、最新日まで続いた日数。3日以上、その日の売買代金7億円以上。</p>`;
+  }
+
   // 週次の需給
   const w = e.週次 || {};
   const inv = w.投資部門別, mg = w.信用残;
@@ -289,6 +304,7 @@ function renderEvening() {
     card("地合い(東証全体)", breadth),
     card("業種別 騰落率", sectorHtml),
     card("資金が集まっている業種", flowHtml, "5日平均売買代金の増減"),
+    card("連続陽線・連続陰線", candleHtml, "代金7億円以上"),
     card("週次の需給", weekly),
     card("アジア・国内金利", asia),
   ].join("");
