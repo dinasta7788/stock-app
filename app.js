@@ -281,7 +281,7 @@ function renderEvening() {
       { label: "代金", html: (x) => `${fmt(x.売買代金_億円, 1)}億` },
     ];
     candleHtml = chips("candle", ["連続陽線", "連続陰線"], state.ui.candle)
-      + stockTable(limited("candle", list, 20), cols) + moreButton("candle", 20, list.length)
+      + stockTable(limited("candle", list, 20), cols, 6) + moreButton("candle", 20, list.length)
       + `<p class="muted small">終値が始値より高い(陽線)・安い(陰線)日が、最新日まで続いた日数。3日以上、その日の売買代金7億円以上。</p>`;
   }
 
