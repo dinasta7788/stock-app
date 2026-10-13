@@ -261,12 +261,13 @@ function renderEvening() {
   }
 
   // 資金が集まっている業種
+  const flowDays = e.業種別資金流入?.[0]?.平均日数 ?? 5;
   let flowHtml = `<div class="empty">データがありません</div>`;
   if (e.業種別資金流入?.length) {
     const list = state.ui.flowAll ? e.業種別資金流入 : e.業種別資金流入.slice(0, 8);
-    flowHtml = `<div class="scroll-x"><table class="table"><tr><th>業種</th><th>5日平均</th><th>10日前比</th><th>20日前比</th></tr>
-      ${list.map((x) => `<tr class="${x.詳細 ? "tap" : ""}"${tapAttr(x.詳細, x.業種, ' data-kind="sector"')}><td>${esc(x.業種)}</td><td>${oku(x["5日平均売買代金_億円"])}</td><td>${chg(x["10日前比"], 0)}</td><td>${chg(x["20日前比"], 0)}</td></tr>`).join("")}
-      </table></div><p class="muted small">業種をタップすると、売買代金の多い10銘柄が出ます。</p>
+    flowHtml = `<div class="scroll-x"><table class="table"><tr><th>業種</th><th>${flowDays}日平均</th><th>10日前比</th><th>20日前比</th></tr>
+      ${list.map((x) => `<tr class="${x.詳細 ? "tap" : ""}"${tapAttr(x.詳細, x.業種, ' data-kind="sector"')}><td>${esc(x.業種)}</td><td>${oku(x.平均売買代金_億円 ?? x["5日平均売買代金_億円"])}</td><td>${chg(x["10日前比"], 0)}</td><td>${chg(x["20日前比"], 0)}</td></tr>`).join("")}
+      </table></div><p class="muted small">直近${flowDays}営業日の売買代金の平均を、10営業日前・20営業日前の時点の${flowDays}日平均と比べた増減。業種をタップすると、売買代金の多い10銘柄が出ます。</p>
       <button class="more" data-toggle="flowAll">${state.ui.flowAll ? "上位だけ表示" : "33業種すべて見る"}</button>`;
   }
 
@@ -303,7 +304,7 @@ function renderEvening() {
     card("指数", quoteRows(idx), e.対象日 ? dayLabel(e.対象日) : ""),
     card("地合い(東証全体)", breadth),
     card("業種別 騰落率", sectorHtml),
-    card("資金が集まっている業種", flowHtml, "5日平均売買代金の増減"),
+    card("資金が集まっている業種", flowHtml, `${flowDays}日平均売買代金の増減`),
     card("連続陽線・連続陰線", candleHtml, "代金7億円以上"),
     card("週次の需給", weekly),
     card("アジア・国内金利", asia),
