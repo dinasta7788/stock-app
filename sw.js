@@ -1,6 +1,6 @@
 // 画面の部品をスマホに保存し、2回目以降は通信せずに表示する(データは app.js が別に読む)
 // 画面を直したときは VERSION を上げる。上げると、次に開いたときに新しい部品に入れ替わる
-const VERSION = "v7";
+const VERSION = "v8";
 const SHELL = ["./", "index.html", "app.css", "app.js", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"];
 
