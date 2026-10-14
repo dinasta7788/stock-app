@@ -1,4 +1,4 @@
-/* 株マーケット: スマホ向けの見た目。上昇は赤、下落は青(日本式) */
+/* 株マーケット: スマホ向けの見た目。上昇は赤、下落は黄緑寄りの緑(ローソク足の陰線も同じ色) */
 :root {
   --bg: #f4f5f7;
   --card: #ffffff;
@@ -6,7 +6,7 @@
   --muted: #6b7280;
   --line: #e3e5e9;
   --up: #d11a2a;
-  --down: #1f5fd1;
+  --down: #5c9e2e;
   --accent: #14171c;
   --chip: #eceef2;
   --chip-on: #1c1f24;
@@ -27,7 +27,7 @@
     --muted: #9aa0a8;
     --line: #2a2e35;
     --up: #ff5c66;
-    --down: #5c9bff;
+    --down: #86bf4f;
     --accent: #e8eaed;
     --chip: #262a31;
     --chip-on: #e8eaed;

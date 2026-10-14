@@ -575,7 +575,7 @@ function chartBox(d, months) {
 function stockView(d, v) {
   const code = d.コード || v.path.split("/").pop();
   return rangeChips(v) + chartBox(d, v.months)
-    + `<p class="muted small">ローソク足は赤が陽線、青が陰線。グラフを指でなぞると、その日の値が出ます。</p>`
+    + `<p class="muted small">ローソク足は赤が陽線、緑が陰線。グラフを指でなぞると、その日の値が出ます。</p>`
     + `<a class="link-btn" href="https://kabutan.jp/stock/?code=${encodeURIComponent(code)}" target="_blank" rel="noopener">株探で詳しく見る</a>`;
 }
 function lineView(d, v) {
