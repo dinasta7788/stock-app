@@ -166,7 +166,9 @@ dialog.sheet[open] { display: flex; }
 .sheet-body { padding: 10px 14px 16px; overflow-y: auto; }
 /* 銘柄名の右の「貸借」: 銘柄名の3分の2の大きさ、白い字。明るい画面では見えるよう灰色の下地を付ける */
 .title-badge { font-size: 0.667em; font-weight: normal; color: #fff; background: var(--muted); padding: 1px 5px; border-radius: 4px; vertical-align: middle; }
-@media (prefers-color-scheme: dark) { .title-badge { background: none; padding: 0; } }
+/* 5日連続陽線の実体の中心と終値: 「1年」のボタンと同じ大きさ、白い字 */
+.range-info { align-self: center; font-size: 13px; color: #fff; background: var(--muted); padding: 2px 8px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+@media (prefers-color-scheme: dark) { .title-badge, .range-info { background: none; padding: 0; } .range-info { padding-left: 4px; } }
 .sheet-sub { font-size: 14px; margin: 14px 0 6px; }
 .chart-box { margin: 4px 0; }
 .chart-box svg { display: block; width: 100%; height: auto; touch-action: pan-y; user-select: none; }
