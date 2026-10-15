@@ -427,13 +427,13 @@ async function fetchChart(path) {
 }
 
 function sma(values, n) {
-  // 移動平均(n日)。足りないところは空
+  // 移動平均(n日)。日数が足りないところや、途中に値のない日があるところは空
   const out = [];
-  let sum = 0;
+  let sum = 0, missing = 0;
   for (let i = 0; i < values.length; i++) {
-    sum += values[i] ?? 0;
-    if (i >= n) sum -= values[i - n] ?? 0;
-    out.push(i >= n - 1 ? sum / n : null);
+    if (isNum(values[i])) sum += values[i]; else missing++;
+    if (i >= n) { if (isNum(values[i - n])) sum -= values[i - n]; else missing--; }
+    out.push(i >= n - 1 && missing === 0 ? sum / n : null);
   }
   return out;
 }
