@@ -574,10 +574,12 @@ function rangeChips(v, extra = "") {
 }
 function bodyMidText(d) {
   // 最新日(5日連続陽線の5日目)のローソク足の実体の真ん中 = (始値 + 終値) ÷ 2 と、終値
-  const o = d.始?.at(-1), c = d.終?.at(-1);
+  const o = d.始?.at(-1), c = d.終?.at(-1), h = d.高?.at(-1);
   if (!isNum(o) || !isNum(c) || c <= o) return "";
   const p = (v) => v.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
-  return `<span class="range-info">実体の中心 ${p(Math.ceil((o + c) / 2))} 終値 ${p(c)}</span>`;   // 中心は小数点以下を切り上げる
+  // 上ひげ(高値 − 終値)が終値の2%以上なら、赤い字で添える
+  const longWick = isNum(h) && (h - c) / c >= 0.02 ? `<span class="range-warn">2%以上</span>` : "";
+  return `<span class="range-info">実体の中心 ${p(Math.ceil((o + c) / 2))} 終値 ${p(c)}</span>${longWick}`;   // 中心は小数点以下を切り上げる
 }
 function chartBox(d, months) {
   sheet.pending.push({ d, months });
