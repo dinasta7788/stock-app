@@ -577,7 +577,7 @@ function bodyMidText(d) {
   const o = d.始?.at(-1), c = d.終?.at(-1);
   if (!isNum(o) || !isNum(c) || c <= o) return "";
   const p = (v) => v.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
-  return `<span class="range-info">実体の中心 ${p((o + c) / 2)} 終値 ${p(c)}</span>`;
+  return `<span class="range-info">実体の中心 ${p(Math.ceil((o + c) / 2))} 終値 ${p(c)}</span>`;   // 中心は小数点以下を切り上げる
 }
 function chartBox(d, months) {
   sheet.pending.push({ d, months });
