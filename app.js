@@ -159,8 +159,8 @@ function card(title, body, sub = "") {
 function tapAttr(path, title, extra = "") {
   return path ? ` data-chart="${esc(path)}" data-title="${esc(title)}"${extra}` : "";
 }
-function stockTap(code, name, months = 12) {
-  return tapAttr(`s/${code}`, `${code} ${name}`, ` data-kind="stock" data-months="${months}"`);
+function stockTap(code, name, months = 12, badge = "") {
+  return tapAttr(`s/${code}`, `${code} ${name}`, ` data-kind="stock" data-months="${months}"${badge ? ` data-badge="${esc(badge)}"` : ""}`);
 }
 function quoteRows(list) {
   if (!list?.length) return `<div class="empty">データがありません</div>`;
@@ -282,7 +282,7 @@ function renderEvening() {
       { label: "代金", html: (x) => `${fmt(x.売買代金_億円, 1)}億` },
     ];
     candleHtml = chips("candle", ["連続陽線", "連続陰線"], state.ui.candle)
-      + stockTable(limited("candle", list, 20), cols, 6) + moreButton("candle", 20, list.length)
+      + stockTable(limited("candle", list, 20), cols, 6, (x) => x.貸借 ? "貸借" : "") + moreButton("candle", 20, list.length)
       + `<p class="muted small">終値が始値より高い(陽線)・安い(陰線)日が、最新日まで続いた日数。3日以上、その日の売買代金7億円以上。</p>`;
   }
 
@@ -339,10 +339,11 @@ function materialItems(list) {
         <span class="muted small">${esc(dayLabel(d.日付))} ${esc(d.時刻)}</span></div>`).join("")}
     </div>`).join("");
 }
-function stockTable(list, cols, months = 12) {
+function stockTable(list, cols, months = 12, badgeOf = () => "") {
+  // badgeOf: チャートの見出しの銘柄名の右に添える文字(例: 貸借)
   if (!list?.length) return `<div class="empty">該当なし</div>`;
   return `<div class="scroll-x"><table class="table"><tr><th>銘柄</th>${cols.map((c) => `<th>${esc(c.label)}</th>`).join("")}</tr>
-    ${list.map((x) => `<tr class="tap"${stockTap(x.コード, x.銘柄名, months)}><td class="stock">${stockName(x.コード, x.銘柄名)}</td>${cols.map((c) => `<td>${c.html(x)}</td>`).join("")}</tr>`).join("")}
+    ${list.map((x) => `<tr class="tap"${stockTap(x.コード, x.銘柄名, months, badgeOf(x))}><td class="stock">${stockName(x.コード, x.銘柄名)}</td>${cols.map((c) => `<td>${c.html(x)}</td>`).join("")}</tr>`).join("")}
   </table></div>`;
 }
 
@@ -599,7 +600,7 @@ function sectorView(d, v) {
 async function drawSheet() {
   const v = sheet.stack.at(-1);
   if (!v) return;
-  $("#chart-title").textContent = v.title;
+  $("#chart-title").innerHTML = esc(v.title) + (v.badge ? ` <span class="title-badge">${esc(v.badge)}</span>` : "");
   $("#chart-back").hidden = sheet.stack.length < 2;
   const body = $("#chart-body");
   body.innerHTML = `<div class="empty">読み込み中…</div>`;
@@ -615,7 +616,7 @@ async function drawSheet() {
 }
 
 function openSheet(el) {
-  const v = { path: el.dataset.chart, title: el.dataset.title || "", kind: el.dataset.kind || "chart", months: Number(el.dataset.months) || 12 };
+  const v = { path: el.dataset.chart, title: el.dataset.title || "", badge: el.dataset.badge || "", kind: el.dataset.kind || "chart", months: Number(el.dataset.months) || 12 };
   if (sheetDialog.open) {
     sheet.stack.push(v);
   } else {
