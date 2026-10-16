@@ -165,7 +165,15 @@ function stockTap(code, name, months = 12, extra = "") {
 }
 function quoteRows(list) {
   if (!list?.length) return `<div class="empty">データがありません</div>`;
-  return list.map((q) => `<div class="row${q.グラフ ? " tap" : ""}"${tapAttr(q.グラフ, q.名前)}><span class="name">${esc(q.名前)}</span><span class="val">${fmt(q.値)}</span>${chg2(q.前日比率, q.前日比)}</div>`).join("");
+  return list.map((q) => {
+    // 夜間: 日経先物(シカゴ)の前日16時 → 今朝6時の変化。前日比の左に並べる
+    const night = q.夜間 ? chg2(q.夜間.変化率, q.夜間.変化) : "";
+    return `<div class="row${q.グラフ ? " tap" : ""}"${tapAttr(q.グラフ, q.名前)}><span class="name">${esc(q.名前)}</span><span class="val">${fmt(q.値)}</span>${night}${chg2(q.前日比率, q.前日比)}</div>`;
+  }).join("");
+}
+function nightNote(list) {
+  const q = (list || []).find((x) => x.夜間);
+  return q ? `<p class="muted small">${esc(q.名前)}は、値の右が「${esc(q.夜間.起点)} → ${esc(q.夜間.終点)}」の変化(日本時間)、いちばん右が前日比。</p>` : "";
 }
 function stockName(code, name) {
   return `<span class="code">${esc(code)}</span>${esc(name)}`;
@@ -202,7 +210,7 @@ function renderMorning() {
 
   return [
     card("寄り付きの目安", quoteRows(m.寄り付きの目安)),
-    card("米国市場", quoteRows(m.米国市場)),
+    card("米国市場", quoteRows(m.米国市場) + nightNote(m.米国市場)),
     card("金利", rateRows || `<div class="empty">データがありません</div>`, "前日差はポイント"),
     card("商品", quoteRows(m.商品)),
     card("米国の注目株", quoteRows(m.米国の注目株)),
@@ -285,7 +293,20 @@ function renderEvening() {
     candleHtml = chips("candle", ["連続陽線", "連続陰線"], state.ui.candle)
       + stockTable(limited("candle", list, 20), cols, 6, (x) => (x.貸借 ? ' data-badge="貸借"' : "")
         + (state.ui.candle === "連続陽線" && x.連続日数 === 5 ? ' data-mid="1"' : "")) + moreButton("candle", 20, list.length)
-      + `<p class="muted small">終値が始値より高い(陽線)・安い(陰線)日が、最新日まで続いた日数。3日以上、その日の売買代金7億円以上。</p>`;
+      + `<p class="muted small">終値が始値より高い(陽線)・安い(陰線)日が、最新日まで続いた日数。3日以上、その日の売買代金7億円以上。</p>`
+      + (state.ui.candle === "連続陽線" ? `<p class="muted small">白抜きの銘柄: 5日連続陽線で、終値が180日の最高値、上ひげが終値の2%未満、貸借銘柄。</p>` : "");
+  }
+
+  // 年初来高値: その日に更新した銘柄を上昇率の高い順に100件、そこから20日平均の売買代金7億円以上
+  let ytdHtml = `<div class="empty">データがありません</div>`;
+  if (e.年初来高値) {
+    const cols = [
+      { label: "終値", html: (x) => fmt(x.終値, 0) },
+      { label: "前日比", html: (x) => chg2(x.前日比率, x.前日比) },
+      { label: "20日平均", html: (x) => `${fmt(x["20日平均売買代金_億円"], 0)}億` },
+    ];
+    ytdHtml = stockTable(limited("ytd", e.年初来高値, 20), cols) + moreButton("ytd", 20, e.年初来高値.length)
+      + `<p class="muted small">その日に年初来高値を更新した銘柄を上昇率の高い順に100件とり、20日平均の売買代金が7億円以上の銘柄。</p>`;
   }
 
   // 週次の需給
@@ -308,6 +329,7 @@ function renderEvening() {
     card("業種別 騰落率", sectorHtml),
     card("資金が集まっている業種", flowHtml, `${flowDays}日平均売買代金の増減`),
     card("連続陽線・連続陰線", candleHtml, "代金7億円以上"),
+    card(`年初来高値 ${e.年初来高値?.length ?? 0}銘柄`, ytdHtml, "20日平均代金7億円以上"),
     card("週次の需給", weekly),
     card("アジア・国内金利", asia),
   ].join("");
@@ -345,7 +367,7 @@ function stockTable(list, cols, months = 12, extraOf = () => "") {
   // extraOf: 銘柄ごとにチャートの画面へ渡す追加の印
   if (!list?.length) return `<div class="empty">該当なし</div>`;
   return `<div class="scroll-x"><table class="table"><tr><th>銘柄</th>${cols.map((c) => `<th>${esc(c.label)}</th>`).join("")}</tr>
-    ${list.map((x) => `<tr class="tap"${stockTap(x.コード, x.銘柄名, months, extraOf(x))}><td class="stock">${stockName(x.コード, x.銘柄名)}</td>${cols.map((c) => `<td>${c.html(x)}</td>`).join("")}</tr>`).join("")}
+    ${list.map((x) => `<tr class="tap"${stockTap(x.コード, x.銘柄名, months, extraOf(x))}><td class="stock">${x.白抜き ? `<span class="knockout">${stockName(x.コード, x.銘柄名)}</span>` : stockName(x.コード, x.銘柄名)}</td>${cols.map((c) => `<td>${c.html(x)}</td>`).join("")}</tr>`).join("")}
   </table></div>`;
 }
 

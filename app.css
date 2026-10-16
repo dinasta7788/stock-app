@@ -168,6 +168,11 @@ dialog.sheet[open] { display: flex; }
 .title-badge { font-size: 0.667em; font-weight: normal; color: #fff; background: var(--muted); padding: 1px 5px; border-radius: 4px; vertical-align: middle; }
 /* 5日連続陽線の実体の中心と終値: 「1年」のボタンと同じ大きさ、白い字 */
 .range-info { align-self: center; font-size: 13px; color: #fff; background: var(--muted); padding: 2px 8px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+/* 白抜き(連続陽線で条件を満たす銘柄): 白い字に黒に近い下地。暗い画面では背景に溶けないよう灰色の下地 */
+.knockout { display: inline; background: #1c1f24; color: #fff; padding: 1px 4px; border-radius: 4px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.knockout .code { color: #fff; }
+@media (prefers-color-scheme: dark) { .knockout { background: #5b616b; } }
 .range-warn { align-self: center; font-size: 13px; color: var(--up); font-weight: 600; }
 @media (prefers-color-scheme: dark) { .title-badge, .range-info { background: none; padding: 0; } .range-info { padding-left: 4px; } }
 .sheet-sub { font-size: 14px; margin: 14px 0 6px; }
