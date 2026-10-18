@@ -107,6 +107,8 @@ main { padding: 4px 16px 16px; }
 .item:first-of-type { border-top: 0; }
 .item-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .item-title { font-size: 13px; margin-top: 2px; }
+.sub-title { font-size: 14px; font-weight: 700; margin: 14px 0 2px; }
+.sub-title:first-child { margin-top: 0; }
 .item a, .table a { color: inherit; }
 .code { color: var(--muted); font-size: 12px; margin-right: 4px; }
 .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--chip); margin-right: 4px; }

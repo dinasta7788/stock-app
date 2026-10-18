@@ -240,6 +240,22 @@ function shortHtml(s) {
     + `<p class="muted small">条件: ${esc(s.条件)}。</p>`;
 }
 
+// 明日の空売り銘柄 その2: 翌朝の寄りが最新日の高値の1%以上上なら、寄りで空売りして大引けで買い戻す
+function gapHtml(g) {
+  if (!g) return `<div class="empty">次の夜の収集から表示されます。</div>`;
+  const p = (v) => (isNum(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 1 }) : "—");
+  const up = (v) => (isNum(v) ? Math.ceil(v).toLocaleString("ja-JP") : "—");
+  const list = g.一覧.map((x) => `<div class="item">
+      <div class="item-head"><span class="tap stock-name"${stockTap(x.コード, x.銘柄名, 6, x.貸借 ? ' data-badge="貸借"' : "")}>${stockName(x.コード, x.銘柄名)}</span><span class="val">終値 ${p(x.終値)}</span></div>
+      <div class="item-title">寄りが <b>${up(x.売りの基準)} 以上</b> なら空売り</div>
+      <div class="item-title">損切り(寄り値+${fmt(g.損切り率, 0)}%) <b class="up">${up(x.損切り_基準)}円〜</b></div>
+      <div class="item-title muted small"><span class="down">陰線${fmt(x.連続日数, 0)}日目</span>・高値${p(x.高値)}・20日平均${fmt(x["20日平均売買代金_億円"], 0)}億${x.貸借 === null ? "・貸借は未確認" : ""}</div>
+    </div>`).join("");
+  return (list || `<div class="empty">該当なし</div>`)
+    + `<p class="muted small">寄りが最新日の高値×${(1 + g.上乗せ率 / 100).toFixed(2)}より下なら見送り。損切りは寄り値×${(1 + g.損切り率 / 100).toFixed(2)}の逆指値(めったにない急騰の保険)で、表示は基準ちょうどで寄ったときの値段。損切りしなければ大引けで買い戻す。夜間の先物は気にしない。</p>`
+    + `<p class="muted small">条件: ${esc(g.条件)}。</p>`;
+}
+
 function renderEvening() {
   const e = state.data.evening;
   if (!e) return `<div class="card empty">夜のデータがまだありません。</div>`;
@@ -340,7 +356,10 @@ function renderEvening() {
   const asia = quoteRows(e.アジア) + (jgb ? `<div class="row${jgb.グラフ ? " tap" : ""}"${tapAttr(jgb.グラフ, "日本10年債利回り(%)")}><span class="name">日本10年債利回り <span class="muted small">${esc(md(jgb.日付))}</span></span><span class="val">${fmt(jgb.利回り, 3)}%</span>${chg(jgb.前日差, 3, "")}</div>` : "");
 
   return [
-    card("明日の空売り銘柄", shortHtml(e.明日の空売り), e.明日の空売り ? `${e.明日の空売り.一覧.length}銘柄` : ""),
+    card("明日の空売り銘柄",
+      `<div class="sub-title">① 5日連続陽線のあと</div>` + shortHtml(e.明日の空売り)
+      + `<div class="sub-title">② 高値から連続陰線のあと</div>` + gapHtml(e.明日の空売り_ギャップ),
+      e.明日の空売り ? `${e.明日の空売り.一覧.length + (e.明日の空売り_ギャップ?.一覧.length ?? 0)}銘柄` : ""),
     card("指数", quoteRows(idx), e.対象日 ? dayLabel(e.対象日) : ""),
     card("地合い(東証全体)", breadth),
     card("業種別 騰落率", sectorHtml),
