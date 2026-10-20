@@ -256,6 +256,32 @@ function gapHtml(g) {
     + `<p class="muted small">条件: ${esc(g.条件)}。</p>`;
 }
 
+// 明日の買い候補(決算後急落): 次の営業日の寄りで買い、10営業日目の大引けで売る。損切りは寄り値-15%の逆指値
+function buyHtml(b) {
+  if (!b) return `<div class="empty">次の夜の収集から表示されます。</div>`;
+  const p = (v) => (isNum(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 1 }) : "—");
+  const dn = (v) => (isNum(v) ? Math.floor(v).toLocaleString("ja-JP") : "—");   // 損切りの逆指値は小数点以下を切り捨てる
+  const rate = (1 - b.損切り率 / 100).toFixed(2);
+  const list = b.一覧.map((x) => {
+    const r = x.修正 || {};
+    const rev = r.判定 === "下方修正"
+      ? (isNum(r.前回) && isNum(r.今回)
+        ? `通期予想を下方修正(${fmt(r.前回, 0)} → ${fmt(r.今回, 0)}百万円、${signed(r.変化率, 1, "%")})`
+        : `通期予想を下方修正${r.根拠 ? `(${esc(r.根拠)})` : ""}`)
+      : `<span class="up">要確認</span>: ${esc(r.根拠 || "")}。決算短信で通期予想が下がったか確かめてから買う`;
+    return `<div class="item">
+      <div class="item-head"><span class="tap stock-name"${stockTap(x.コード, x.銘柄名, 6, x.貸借 ? ' data-badge="貸借"' : "")}>${stockName(x.コード, x.銘柄名)}</span><span class="val">終値 ${p(x.終値)}</span></div>
+      <div class="item-title"><b>${md(b.買う日)}の寄りで買い → ${md(b.売る日)}の大引けで売る</b></div>
+      <div class="item-title">損切り(寄り値−${fmt(b.損切り率, 0)}%) <b class="down">寄り値×${rate}</b> <span class="muted small">終値で寄ったら ${dn(x.損切り_終値で寄ったとき)}円</span></div>
+      <div class="item-title small">${rev}${r.資料 ? ` <a href="${esc(r.資料)}" target="_blank" rel="noopener">資料</a>` : ""}</div>
+      <div class="item-title muted small"><span class="down">${signed(x.反応, 1, "%")}</span>・出来高${fmt(x.出来高倍率, 1)}倍・引けの位置${fmt(x.引けの位置, 0)}%・1年の位置${fmt(x.高安の位置, 0)}%・20日平均${fmt(x["20日平均売買代金_億円"], 0)}億・決算 ${esc(md(x.決算.日付))} ${esc(x.決算.時刻)}</div>
+    </div>`;
+  }).join("");
+  return (list || `<div class="empty">該当なし${isNum(b.急落した決算) ? `(-7%以下に急落した決算 ${b.急落した決算}件はどれも条件外)` : ""}</div>`)
+    + `<p class="muted small">寄りで買い(成行)、損切りは寄り値×${rate}の逆指値。損切りしなければ買った日を1日目として${fmt(b.持つ日数, 0)}営業日目の大引けで売る。過去の検証(2022/1〜2026/10)では73回・勝率78%・平均+3.99%。</p>`
+    + `<p class="muted small">条件: ${esc(b.条件)}。引けの位置 = その日の値幅の中の終値の位置(0%が安値)、1年の位置 = 発表前の終値の、1年の安値〜高値の中の位置。</p>`;
+}
+
 function renderEvening() {
   const e = state.data.evening;
   if (!e) return `<div class="card empty">夜のデータがまだありません。</div>`;
@@ -360,6 +386,7 @@ function renderEvening() {
       `<div class="sub-title">① 5日連続陽線のあと</div>` + shortHtml(e.明日の空売り)
       + `<div class="sub-title">② 高値から連続陰線のあと</div>` + gapHtml(e.明日の空売り_ギャップ),
       e.明日の空売り ? `${e.明日の空売り.一覧.length + (e.明日の空売り_ギャップ?.一覧.length ?? 0)}銘柄` : ""),
+    card("明日の買い候補(決算後急落)", buyHtml(e.明日の買い_決算), e.明日の買い_決算 ? `${e.明日の買い_決算.一覧.length}銘柄` : ""),
     card("指数", quoteRows(idx), e.対象日 ? dayLabel(e.対象日) : ""),
     card("地合い(東証全体)", breadth),
     card("業種別 騰落率", sectorHtml),
