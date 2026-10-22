@@ -256,24 +256,6 @@ function gapHtml(g) {
     + `<p class="muted small">条件: ${esc(g.条件)}。</p>`;
 }
 
-// 明日の空売り(過熱した上昇): 翌朝の寄りが終値の+5%以上なら、寄りで空売りして大引けで買い戻す。損切りは置かない
-function hotHtml(h) {
-  if (!h) return `<div class="empty">次の夜の収集から表示されます。</div>`;
-  const p = (v) => (isNum(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 1 }) : "—");
-  const yen = (v) => (isNum(v) ? v.toLocaleString("ja-JP") : "—");
-  const list = h.一覧.map((x) => `<div class="item">
-      <div class="item-head"><span class="tap stock-name"${stockTap(x.コード, x.銘柄名, 6, x.貸借 ? ' data-badge="貸借"' : "")}>${stockName(x.コード, x.銘柄名)}</span><span class="val">終値 ${p(x.終値)}</span></div>
-      <div class="item-title">寄りが <b>${yen(x.売りの基準)}円 以上</b>(終値+${fmt(h.上乗せ率, 0)}%)なら空売り → 大引けで買い戻す</div>
-      <div class="item-title">当てはまる条件 <b>${esc((x.当てはまる条件 || []).join("・"))}</b> <span class="muted small">ストップ高 ${yen(x.ストップ高)}円(張り付いたら売れない)</span></div>
-      <div class="item-title muted small"><span class="up">${signed(x.前日比率, 1, "%")}</span>・直前20日${signed(x.直前20日上昇率, 1, "%")}・前5日の出来高${fmt(x.前5日出来高倍率, 1)}倍・出来高${fmt(x.出来高倍率, 1)}倍・20日平均${fmt(x["20日平均売買代金_億円"], 1)}億・${esc(x.市場 || "")}${x.貸借 === null ? "・貸借は未確認" : ""}</div>
-    </div>`).join("");
-  const notes = (h.条件の説明 || []).map((c) => `<b>${esc(c.記号)}</b> ${esc(c.内容)}(${fmt(c.回数, 0)}回・勝率${fmt(c.勝率, 0)}%・平均+${fmt(c.平均, 2)}%)`).join("<br>");
-  return (list || `<div class="empty">該当なし</div>`)
-    + `<p class="muted small">寄りが終値+${fmt(h.上乗せ率, 0)}%より下なら見送り。損切りは置かず(過去の検証では損切りを入れると成績が下がった)、大引けで買い戻す。100回に1回ほど-20%以上の負けがあるので、1銘柄の金額は小さく。</p>`
-    + `<p class="muted small">過去の検証(2021/11〜2026/10、寄りが終値+${fmt(h.上乗せ率, 0)}%以上で空売り→大引けで買い戻し、コスト込み):<br>${notes}</p>`
-    + `<p class="muted small">条件: ${esc(h.条件)}。直前20日 = 最新日の前日までの20営業日の上昇率。</p>`;
-}
-
 // 明日の買い候補(決算後急落): 次の営業日の寄りで買い、10営業日目の大引けで売る。損切りは寄り値-15%の逆指値
 function buyHtml(b) {
   if (!b) return `<div class="empty">次の夜の収集から表示されます。</div>`;
@@ -404,7 +386,6 @@ function renderEvening() {
       `<div class="sub-title">① 5日連続陽線のあと</div>` + shortHtml(e.明日の空売り)
       + `<div class="sub-title">② 高値から連続陰線のあと</div>` + gapHtml(e.明日の空売り_ギャップ),
       e.明日の空売り ? `${e.明日の空売り.一覧.length + (e.明日の空売り_ギャップ?.一覧.length ?? 0)}銘柄` : ""),
-    card("明日の空売り(過熱した上昇)", hotHtml(e.明日の空売り_過熱), e.明日の空売り_過熱 ? `${e.明日の空売り_過熱.一覧.length}銘柄` : ""),
     card("明日の買い候補(決算後急落)", buyHtml(e.明日の買い_決算), e.明日の買い_決算 ? `${e.明日の買い_決算.一覧.length}銘柄` : ""),
     card("指数", quoteRows(idx), e.対象日 ? dayLabel(e.対象日) : ""),
     card("地合い(東証全体)", breadth),
