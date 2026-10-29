@@ -19,7 +19,7 @@ const state = {
   loadErrors: [],
   lastLoad: 0,
   tab: null,
-  ui: { kind: "すべて", mover: "値上がり率", top30: "代金", candle: "連続陽線", sectorSort: "前日比", sectorsAll: false, flowAll: false, more: {} },
+  ui: { kind: "すべて", mover: "値上がり率", top30: "代金", candle: "連続陽線", sectorSort: "前日比", sectorsAll: false, flowAll: false, upMiss: false, more: {} },
 };
 
 const $ = (s) => document.querySelector(s);
@@ -282,6 +282,31 @@ function buyHtml(b) {
     + `<p class="muted small">条件: ${esc(b.条件)}。引けの位置 = その日の値幅の中の終値の位置(0%が安値)、1年の位置 = 発表前の終値の、1年の安値〜高値の中の位置。</p>`;
 }
 
+// 上方修正の先回り: 決算の20営業日前、15:25の株価が範囲内なら引けで買い(現物)、発表の翌営業日の引けで売る
+function upHtml(u) {
+  if (!u) return `<div class="empty">次の夜の収集から表示されます。</div>`;
+  const yen = (v) => (isNum(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 0 }) : "—");
+  const annDay = (x) => `${md(x.発表日)}${x.発表日は推定 ? "(推定)" : ""}`;
+  const list = u.一覧.map((x) => `<div class="item">
+      <div class="item-head"><span class="tap stock-name"${stockTap(x.コード, x.銘柄名)}>${stockName(x.コード, x.銘柄名)}</span><span class="val">終値 ${yen(x.終値)}</span></div>
+      <div class="item-title">15:25の株価が <b>${yen(x.下限)} 〜 ${yen(x.上限)}円</b> なら引けで買う</div>
+      <div class="item-title">発表 ${annDay(x)}(${fmt(x.営業日前, 0)}営業日前) → <b>${md(x.売る日)}の引けで売る</b></div>
+      <div class="item-title muted small">点数${signed(x.点数_終値, 0)}(終値で)・60日${signed(x["60日の騰落_終値"], 1, "%")}・上振れ${fmt(x.上振れ, 0)}%・20日平均${fmt(x["20日平均売買代金_億円"], 0)}億・${esc(x.次の決算)}</div>
+    </div>`).join("");
+  const hold = u.持っていれば.map((x) => `<div class="row tap"${stockTap(x.コード, x.銘柄名)}><span class="name">${stockName(x.コード, x.銘柄名)}</span><span class="val muted small">${md(x.買う日)}買い → 発表${md(x.発表日)} → <b>${md(x.売る日)}売り</b></span></div>`).join("");
+  const plans = limited("upPlan", u.今後の予定, 8).map((x) => `<div class="row tap"${stockTap(x.コード, x.銘柄名)}><span class="name">${stockName(x.コード, x.銘柄名)}</span><span class="val muted small">${md(x.買う日)}判定・発表${annDay(x)}・今なら${yen(x.下限)}〜${yen(x.上限)}円</span></div>`).join("");
+  const miss = state.ui.upMiss ? u.外れ.map((x) => `<div class="row"><span class="name">${stockName(x.コード, x.銘柄名)}</span><span class="val muted small">${esc(x.理由)}</span></div>`).join("") : "";
+  return `<div class="sub-title">${md(u.判定日)}の${esc(u.判定時刻)}に判定</div>`
+    + (list || `<div class="empty">該当なし</div>`)
+    + (u.外れ.length ? `<button class="more" data-toggle="upMiss">${state.ui.upMiss ? "外れた銘柄を閉じる" : `条件に合わず外れた ${u.外れ.length}銘柄を見る`}</button>${miss}` : "")
+    + (u.外れ_売買代金不足 ? `<p class="muted small">ほかに売買代金7億円未満で外れた ${fmt(u.外れ_売買代金不足, 0)}銘柄。</p>` : "")
+    + `<div class="sub-title">買っていれば持っている銘柄</div>` + (hold || `<div class="empty">なし</div>`)
+    + `<div class="sub-title">今後の予定(今の株価なら条件に合う銘柄)</div>` + (plans || `<div class="empty">なし</div>`)
+    + moreButton("upPlan", 8, u.今後の予定.length)
+    + `<p class="muted small">決算の${fmt(u.買う日の営業日前, 0)}営業日前の${esc(u.判定時刻)}の株価が範囲内なら、引け(引成)で現物を買い、発表の翌営業日の引けで売る。途中で下げても売らない。発表日が遅く決まったときは${fmt(u.遅いときの限度, 0)}営業日前まで買う。範囲は前日までのデータから計算(株価1,000〜3,000円・60日+5%以上・点数2点以上・その日+10%未満)。今後の予定の判定日は発表日から数えた目安。過去の検証(2022/10〜2026/8)では82件・市場比 平均+6.2%・勝率71%。</p>`
+    + `<p class="muted small">条件: ${esc(u.条件)}。土台の一覧 ${esc(u.土台.作成日)}作成・${fmt(u.土台.社数, 0)}社(${esc(u.土台.決算データ)})。</p>`;
+}
+
 function renderEvening() {
   const e = state.data.evening;
   if (!e) return `<div class="card empty">夜のデータがまだありません。</div>`;
@@ -387,6 +412,7 @@ function renderEvening() {
       + `<div class="sub-title">② 高値から連続陰線のあと</div>` + gapHtml(e.明日の空売り_ギャップ),
       e.明日の空売り ? `${e.明日の空売り.一覧.length + (e.明日の空売り_ギャップ?.一覧.length ?? 0)}銘柄` : ""),
     card("明日の買い候補(決算後急落)", buyHtml(e.明日の買い_決算), e.明日の買い_決算 ? `${e.明日の買い_決算.一覧.length}銘柄` : ""),
+    card("上方修正の先回り(引けで買い)", upHtml(e.上方修正の先回り), e.上方修正の先回り ? `${e.上方修正の先回り.一覧.length}銘柄` : ""),
     card("指数", quoteRows(idx), e.対象日 ? dayLabel(e.対象日) : ""),
     card("地合い(東証全体)", breadth),
     card("業種別 騰落率", sectorHtml),
