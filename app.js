@@ -269,8 +269,9 @@ function buyHtml(b) {
         ? `通期予想を下方修正(${fmt(r.前回, 0)} → ${fmt(r.今回, 0)}百万円、${signed(r.変化率, 1, "%")})`
         : `通期予想を下方修正${r.根拠 ? `(${esc(r.根拠)})` : ""}`)
       : `<span class="up">要確認</span>: ${esc(r.根拠 || "")}。決算短信で通期予想が下がったか確かめてから買う`;
+    const check = r.判定 !== "下方修正" ? ` <span class="tag up">要確認</span>` : "";
     return `<div class="item">
-      <div class="item-head"><span class="tap stock-name"${stockTap(x.コード, x.銘柄名, 6, x.貸借 ? ' data-badge="貸借"' : "")}>${stockName(x.コード, x.銘柄名)}</span><span class="val">終値 ${p(x.終値)}</span></div>
+      <div class="item-head"><span><span class="tap stock-name"${stockTap(x.コード, x.銘柄名, 6, x.貸借 ? ' data-badge="貸借"' : "")}>${stockName(x.コード, x.銘柄名)}</span>${check}</span><span class="val">終値 ${p(x.終値)}</span></div>
       <div class="item-title"><b>${md(b.買う日)}の寄りで買い → ${md(b.売る日)}の大引けで売る</b></div>
       <div class="item-title">損切り(寄り値−${fmt(b.損切り率, 0)}%) <b class="down">寄り値×${rate}</b> <span class="muted small">終値で寄ったら ${dn(x.損切り_終値で寄ったとき)}円</span></div>
       <div class="item-title small">${rev}${r.資料 ? ` <a href="${esc(r.資料)}" target="_blank" rel="noopener">資料</a>` : ""}</div>
