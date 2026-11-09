@@ -249,9 +249,12 @@ function gapHtml(g) {
       <div class="item-head"><span class="tap stock-name"${stockTap(x.コード, x.銘柄名, 6, x.貸借 ? ' data-badge="貸借"' : "")}>${stockName(x.コード, x.銘柄名)}</span><span class="val">終値 ${p(x.終値)}</span></div>
       <div class="item-title">寄りが <b>${up(x.売りの基準)} 以上</b> なら空売り</div>
       <div class="item-title">損切り(寄り値+${fmt(g.損切り率, 0)}%) <b class="up">${up(x.損切り_基準)}円〜</b></div>
-      <div class="item-title muted small"><span class="down">陰線${fmt(x.連続日数, 0)}日目</span>・高値${p(x.高値)}・20日平均${fmt(x["20日平均売買代金_億円"], 0)}億${x.貸借 === null ? "・貸借は未確認" : ""}</div>
+      <div class="item-title muted small"><span class="down">陰線${fmt(x.連続日数, 0)}日目</span>・5日線${signed(x["5日線乖離"], 1, "%")}・高値${p(x.高値)}・20日平均${fmt(x["20日平均売買代金_億円"], 0)}億${x.貸借 === null ? "・貸借は未確認" : ""}</div>
     </div>`).join("");
+  // 浅い押し(5日線からの下げが小さい)は空売りしない。次の日の値動きだけ記録している
+  const shallow = (g.浅い押しで見送り || []).map((x) => `${stockName(x.コード, x.銘柄名)}(5日線${signed(x["5日線乖離"], 1, "%")})`).join("、");
   return (list || `<div class="empty">該当なし</div>`)
+    + (shallow ? `<p class="muted small">浅い押しで見送り(成績の記録だけ): ${shallow}</p>` : "")
     + `<p class="muted small">寄りが最新日の高値×${(1 + g.上乗せ率 / 100).toFixed(2)}より下なら見送り。損切りは寄り値×${(1 + g.損切り率 / 100).toFixed(2)}の逆指値(めったにない急騰の保険)で、表示は基準ちょうどで寄ったときの値段。損切りしなければ大引けで買い戻す。夜間の先物は気にしない。</p>`
     + `<p class="muted small">条件: ${esc(g.条件)}。</p>`;
 }
