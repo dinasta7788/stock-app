@@ -69,6 +69,7 @@ button { font: inherit; color: inherit; }
 .notices { margin: 10px 16px 0; display: grid; gap: 6px; }
 .notice { background: var(--notice-bg); border: 1px solid var(--notice-line); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
 .notice.error { background: var(--error-bg); border-color: var(--error-line); }
+.notice.sell { font-size: 15px; font-weight: 700; }
 
 /* カード */
 main { padding: 4px 16px 16px; }

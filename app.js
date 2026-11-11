@@ -140,6 +140,11 @@ function renderNotices() {
       list.push({ error: true, text: `${FILE_LABEL[e.name]}を読み込めませんでした(${e.message})。${has ? "前回のデータを表示しています。" : ""}` });
     }
   }
+  // 決算買い: 9日目の夜(次の営業日が売る日)に「〇月〇日の大引けで売却」を一番上に出す
+  for (const x of evening?.明日の売り_決算 || []) {
+    const [, mo, da] = String(x.売る日).split("-").map(Number);
+    list.push({ sell: true, text: `${x.コード} ${x.銘柄名}　${mo}月${da}日の大引けで売却` });
+  }
   for (const t of calendar?.お知らせ || []) list.push({ text: t });
   for (const [label, d] of [["朝", morning], ["夜", evening]]) {
     const errs = d?.エラー || [];
@@ -148,7 +153,8 @@ function renderNotices() {
   }
   const box = $("#notices");
   box.hidden = list.length === 0;
-  box.innerHTML = list.map((n) => `<div class="notice${n.error ? " error" : ""}">${esc(n.text)}</div>`).join("");
+  list.sort((a, b) => (b.sell ? 1 : 0) - (a.sell ? 1 : 0));   // 売却の知らせを一番上に
+  box.innerHTML = list.map((n) => `<div class="notice${n.error ? " error" : ""}${n.sell ? " sell" : ""}">${esc(n.text)}</div>`).join("");
 }
 
 // ---------- 部品 ----------
