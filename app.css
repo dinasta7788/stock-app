@@ -147,6 +147,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .settings-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 .settings-actions button { border: 0; border-radius: 8px; padding: 9px 14px; background: var(--chip-on); color: var(--chip-on-text); cursor: pointer; }
 .settings-actions button.secondary { background: var(--chip); color: var(--text); }
+/* データ収集を今すぐ動かす */
+.settings-body h2.mt { margin-top: 18px; }
+.run-actions { display: flex; gap: 8px; margin-top: 8px; }
+.run-actions button, .run-btn { border: 0; border-radius: 8px; padding: 8px 12px; background: var(--chip-on); color: var(--chip-on-text); cursor: pointer; font-size: 13px; }
+.run-actions button:disabled, .run-btn:disabled { opacity: .5; cursor: default; }
+.run-btn { display: block; margin-top: 6px; }
+.run-msg:empty { display: none; }
+.notice .run-msg { margin-top: 4px; }
 .empty { color: var(--muted); font-size: 13px; padding: 4px 0; }
 
 /* 前日比: 上に %、下に増減の値 */

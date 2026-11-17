@@ -44,6 +44,13 @@
       <p>GitHub で作った「読み取り専用の鍵」(github_pat_ で始まる文字列)を貼り付けてください。鍵はこのスマホの中だけに保存されます。</p>
       <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_...">
       <p id="token-status" class="muted"></p>
+      <h2 class="mt">データ収集を今すぐ動かす</h2>
+      <p>朝・夜の自動の収集が遅れているときに使います。上の鍵に、GitHub で stock-data の「Actions: Read and write」の権限を足しておく必要があります。</p>
+      <div class="run-actions">
+        <button type="button" data-run="morning">朝の収集</button>
+        <button type="button" data-run="evening">夜の収集</button>
+      </div>
+      <p class="run-msg muted"></p>
       <div class="settings-actions">
         <button value="cancel" class="secondary">閉じる</button>
         <button id="save-token" value="save">保存して読み込む</button>

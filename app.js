@@ -145,6 +145,9 @@ function renderNotices() {
     const [, mo, da] = String(x.売る日).split("-").map(Number);
     list.push({ sell: true, text: `${x.コード} ${x.銘柄名}　${mo}月${da}日の大引けで売却` });
   }
+  // 朝・夜のデータが今日の分になっていなければ、その場で収集を動かすボタンを出す
+  const stale = staleMode();
+  if (stale) list.push({ run: stale, text: `${MODE_LABEL[stale]}のデータがまだ今日の分になっていません。` });
   for (const t of calendar?.お知らせ || []) list.push({ text: t });
   for (const [label, d] of [["朝", morning], ["夜", evening]]) {
     const errs = d?.エラー || [];
@@ -154,7 +157,97 @@ function renderNotices() {
   const box = $("#notices");
   box.hidden = list.length === 0;
   list.sort((a, b) => (b.sell ? 1 : 0) - (a.sell ? 1 : 0));   // 売却の知らせを一番上に
-  box.innerHTML = list.map((n) => `<div class="notice${n.error ? " error" : ""}${n.sell ? " sell" : ""}">${esc(n.text)}</div>`).join("");
+  box.innerHTML = list.map((n) => `<div class="notice${n.error ? " error" : ""}${n.sell ? " sell" : ""}">${esc(n.text)}`
+    + (n.run ? `<button class="run-btn" data-run="${n.run}"${run.busy ? " disabled" : ""}>今すぐ${MODE_LABEL[n.run]}の収集を動かす</button><div class="run-msg muted small">${esc(run.msg)}</div>` : "")
+    + `</div>`).join("");
+}
+
+// ---------- データ収集を今すぐ動かす(stock-data の GitHub Actions「データ収集」を手で起動) ----------
+//   鍵は「データを読む鍵」と同じ。GitHub でその鍵に stock-data の Actions: Read and write を足しておく
+const WORKFLOW = "collect.yml";
+const MODE_LABEL = { morning: "朝", evening: "夜" };
+const run = { busy: false, msg: "", last: null };
+
+function runHeaders(token) {
+  return { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, "X-GitHub-Api-Version": "2022-11-28" };
+}
+
+// 平日で、朝(7〜15時)・夜(19時以降)のデータが今日の分でなければ "morning" / "evening"。祝日にも出るが、押しても収集側が何もせず終わる
+function staleMode() {
+  if (LOCAL) return null;
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Tokyo", weekday: "short" }).format(new Date());
+  if (wd === "Sat" || wd === "Sun") return null;
+  const h = jstHour(), today = todayIso();
+  const { morning, evening } = state.data;
+  if (h >= 19 && evening && evening.対象日 !== today) return "evening";
+  if (h >= 7 && h < 15 && morning && !String(morning.更新 || "").startsWith(today)) return "morning";
+  return null;
+}
+
+async function latestRun(token) {
+  const r = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/runs?per_page=1`, { headers: runHeaders(token), cache: "no-store" });
+  if (r.status === 401) throw new Error("鍵が正しくないか、期限が切れています");
+  if (r.status === 403 || r.status === 404) throw new Error("鍵に Actions の権限がありません");
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return (await r.json()).workflow_runs?.[0] || null;
+}
+
+function runText(x) {
+  if (!x) return "収集の記録がまだありません。";
+  const t = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(x.created_at));
+  const how = x.event === "schedule" ? "予約" : "手動";
+  const st = x.status === "completed" ? (x.conclusion === "success" ? "完了" : `失敗(${x.conclusion})`)
+    : x.status === "in_progress" ? "実行中" : "順番待ち";
+  return `最後の収集: ${t} 開始(${how})・${st}`;
+}
+
+function showRun() {
+  document.querySelectorAll(".run-msg").forEach((el) => { el.textContent = run.msg; });
+  document.querySelectorAll("[data-run]").forEach((b) => { b.disabled = run.busy; });
+}
+
+async function refreshRun() {
+  const token = store.get("token");
+  if (!token || LOCAL) return;
+  try { run.last = await latestRun(token); run.msg = runText(run.last); } catch (e) { run.msg = `収集の状態を読めません(${e.message || e})`; }
+  showRun();
+}
+
+async function startRun(mode) {
+  if (run.busy) return;
+  const token = store.get("token");
+  if (!token) { alert("データを読む鍵が未設定です。右上の ⚙ から設定してください。"); return; }
+  run.busy = true;
+  run.msg = `${MODE_LABEL[mode]}の収集を頼んでいます…`;
+  showRun();
+  try {
+    try { run.last = await latestRun(token); } catch { run.last = null; }   // 状態が読めなくても起動は試す
+    if (run.last && run.last.status !== "completed"
+      && !confirm(`いま別の収集が${run.last.status === "in_progress" ? "実行中" : "順番待ち"}です。それでも${MODE_LABEL[mode]}の収集を動かしますか？`)) {
+      run.msg = runText(run.last);
+      return;
+    }
+    const r = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`, {
+      method: "POST",
+      headers: { ...runHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ ref: "main", inputs: { mode } }),
+    });
+    if (r.status === 204) {
+      run.msg = `${MODE_LABEL[mode]}の収集を始めました。終わるまで${mode === "evening" ? "20〜30" : "5〜10"}分ほどかかります。終わったら ↻ で読み直してください。`;
+      setTimeout(refreshRun, 10000);
+    } else if (r.status === 401) {
+      run.msg = "動かせませんでした(鍵が正しくないか、期限が切れています)";
+    } else if (r.status === 403 || r.status === 404) {
+      run.msg = "動かせませんでした(鍵に stock-data の「Actions: Read and write」の権限がありません)";
+    } else {
+      run.msg = `動かせませんでした(HTTP ${r.status})`;
+    }
+  } catch (e) {
+    run.msg = `動かせませんでした(${e.message || e})`;
+  } finally {
+    run.busy = false;
+    showRun();
+  }
 }
 
 // ---------- 部品 ----------
@@ -810,6 +903,7 @@ document.addEventListener("click", (ev) => {
   if (ev.target.closest("a")) return;   // リンク(開示の資料など)はそのまま開く
   const t = ev.target.closest("button, [data-chart]");
   if (!t) return;
+  if (t.dataset.run) return startRun(t.dataset.run);
   if (t.dataset.chart) return openSheet(t);
   if (t.dataset.range) { const v = sheet.stack.at(-1); if (v) { v.months = Number(t.dataset.range); drawSheet(); } return; }
   if (t.dataset.tab) return setTab(t.dataset.tab);
@@ -826,7 +920,9 @@ $("#open-settings").addEventListener("click", () => {
   const t = store.get("token");
   $("#token").value = "";
   $("#token-status").textContent = LOCAL ? "開発用の PC では鍵なしで読みます。" : t ? `設定済み(末尾 …${t.slice(-4)})` : "未設定です。";
+  showRun();
   dialog.showModal();
+  if (!run.busy) refreshRun();   // 最後の収集の状態を出す
 });
 $("#save-token").addEventListener("click", (ev) => {
   const v = $("#token").value.trim();
